@@ -100,12 +100,62 @@ export const MODELS = {
     recommended: false,
     lowQuality: false
   },
-  // 'deepseek/deepseek-chat-v3-0324': { 
-  //   tier: 'free', 
-  //   priority: 75,
-  //   recommended: false,
-  //   lowQuality: false
-  // },
+  
+  // Ollama local models (free tier - no API costs)
+  'ollama/llama3.2': { 
+    tier: 'free', 
+    priority: 80,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/llama3.1': { 
+    tier: 'free', 
+    priority: 79,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/mistral': { 
+    tier: 'free', 
+    priority: 78,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/codellama': { 
+    tier: 'free', 
+    priority: 77,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/gemma': { 
+    tier: 'free', 
+    priority: 76,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/phi': { 
+    tier: 'free', 
+    priority: 75,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/qwen': { 
+    tier: 'free', 
+    priority: 74,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/neural-chat': { 
+    tier: 'free', 
+    priority: 73,
+    recommended: false,
+    lowQuality: false
+  },
+  'ollama/orca-mini': { 
+    tier: 'free', 
+    priority: 72,
+    recommended: false,
+    lowQuality: false
+  },
 };
 
 // Helper to check if a user can access a model based on subscription status

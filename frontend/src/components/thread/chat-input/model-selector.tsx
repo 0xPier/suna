@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { isLocalMode } from '@/lib/config';
 import { CustomModelDialog, CustomModelFormData } from './custom-model-dialog';
+import { OllamaModelManager } from './ollama-model-manager';
 import Link from 'next/link';
 
 interface CustomModel {
@@ -754,6 +755,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         initialData={dialogInitialData}
         mode={dialogMode}
       />
+
+      {/* Ollama Model Manager */}
+      <OllamaModelManager onModelAdded={onModelChange} />
 
       {paywallOpen && (
         <PaywallDialog

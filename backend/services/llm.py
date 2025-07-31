@@ -38,7 +38,7 @@ class LLMRetryError(LLMError):
 
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
-    providers = ['OPENAI', 'ANTHROPIC', 'GROQ', 'OPENROUTER', 'XAI', 'MORPH', 'GEMINI']
+    providers = ['OPENAI', 'ANTHROPIC', 'GROQ', 'OPENROUTER', 'XAI', 'MORPH', 'GEMINI', 'OLLAMA']
     for provider in providers:
         key = getattr(config, f'{provider}_API_KEY')
         if key:
@@ -50,6 +50,11 @@ def setup_api_keys() -> None:
     if config.OPENROUTER_API_KEY and config.OPENROUTER_API_BASE:
         os.environ['OPENROUTER_API_BASE'] = config.OPENROUTER_API_BASE
         logger.debug(f"Set OPENROUTER_API_BASE to {config.OPENROUTER_API_BASE}")
+
+    # Set up Ollama API base
+    if config.OLLAMA_API_BASE:
+        os.environ['OLLAMA_API_BASE'] = config.OLLAMA_API_BASE
+        logger.debug(f"Set OLLAMA_API_BASE to {config.OLLAMA_API_BASE}")
 
     # Set up AWS Bedrock credentials
     aws_access_key = config.AWS_ACCESS_KEY_ID
@@ -256,6 +261,14 @@ def prepare_params(
     if model_name.startswith("xai/"):
         logger.debug(f"Preparing xAI parameters for model: {model_name}")
         # xAI models support standard parameters, no special handling needed beyond reasoning_effort
+
+    # Add Ollama-specific parameters
+    if model_name.startswith("ollama/"):
+        logger.debug(f"Preparing Ollama parameters for model: {model_name}")
+        # Remove the "ollama/" prefix for the actual model name
+        if "ollama/" in model_name:
+            params["model"] = model_name.replace("ollama/", "")
+        # Ollama models support standard parameters, no special handling needed
 
     return params
 

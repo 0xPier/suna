@@ -187,6 +187,9 @@ api_router.include_router(pipedream_api.router)
 from admin import api as admin_api
 api_router.include_router(admin_api.router)
 
+from services import ollama_api
+api_router.include_router(ollama_api.router)
+
 @api_router.get("/health")
 async def health_check():
     logger.info("Health check endpoint called")

@@ -210,6 +210,10 @@ class Configuration:
     OR_SITE_URL: Optional[str] = "https://kortix.ai"
     OR_APP_NAME: Optional[str] = "Kortix AI"    
     
+    # Ollama configuration
+    OLLAMA_API_BASE: Optional[str] = "http://localhost:11434"
+    OLLAMA_API_KEY: Optional[str] = None  # Usually not needed for local Ollama
+    
     # AWS Bedrock credentials
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None

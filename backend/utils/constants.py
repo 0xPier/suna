@@ -107,7 +107,81 @@ MODELS = {
             "output_cost_per_million_tokens": 15.00
         },
         "tier_availability": ["paid"]
-    },   
+    },
+    
+    # Ollama local models (free tier - no API costs)
+    "ollama/llama3.2": {
+        "aliases": ["llama3.2", "llama3.2-3b", "llama3.2-7b", "llama3.2-70b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/llama3.1": {
+        "aliases": ["llama3.1", "llama3.1-8b", "llama3.1-70b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/mistral": {
+        "aliases": ["mistral", "mistral-7b", "mistral-7b-instruct"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/codellama": {
+        "aliases": ["codellama", "codellama-7b", "codellama-13b", "codellama-34b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/gemma": {
+        "aliases": ["gemma", "gemma-2b", "gemma-7b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/phi": {
+        "aliases": ["phi", "phi-2", "phi-3"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/qwen": {
+        "aliases": ["qwen", "qwen-7b", "qwen-14b", "qwen-72b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/neural-chat": {
+        "aliases": ["neural-chat", "neural-chat-7b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
+    "ollama/orca-mini": {
+        "aliases": ["orca-mini", "orca-mini-3b"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.00,
+            "output_cost_per_million_tokens": 0.00
+        },
+        "tier_availability": ["free", "paid"]
+    },
 }
 
 # Derived structures (auto-generated from MODELS)

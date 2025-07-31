@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile:1
 # ---- Base Stage ----
-FROM node:22-slim AS base
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -10,18 +10,20 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies using apk (Alpine package manager)
+RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    build-essential \
-    pkg-config \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libjpeg-dev \
-    libgif-dev \
-    librsvg2-dev \
-    && rm -rf /var/lib/apt/lists/*
+    build-base \
+    pkgconfig \
+    cairo-dev \
+    pango-dev \
+    jpeg-dev \
+    giflib-dev \
+    librsvg-dev \
+    pixman-dev \
+    pkgconfig
 
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
