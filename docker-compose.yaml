@@ -47,6 +47,7 @@ services:
       - REDIS_SSL=False
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
+      - OLLAMA_API_BASE=http://host.docker.internal:11434
     depends_on:
       redis:
         condition: service_healthy
@@ -73,6 +74,7 @@ services:
       - REDIS_SSL=False
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
+      - OLLAMA_API_BASE=http://host.docker.internal:11434
     depends_on:
       redis:
         condition: service_healthy

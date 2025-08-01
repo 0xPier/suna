@@ -129,7 +129,11 @@ export function HeroSection() {
   useEffect(() => {
     if (authDialogOpen && user && !isLoading) {
       setAuthDialogOpen(false);
-      router.push('/dashboard');
+      // Temporarily disable redirect to allow home page to load
+      // const pendingPrompt = localStorage.getItem(PENDING_PROMPT_KEY);
+      // if (pendingPrompt) {
+      //   router.push('/dashboard');
+      // }
     }
   }, [user, isLoading, authDialogOpen, router]);
 

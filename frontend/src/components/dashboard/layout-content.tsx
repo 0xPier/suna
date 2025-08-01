@@ -34,6 +34,17 @@ export default function DashboardLayoutContent({
   const router = useRouter();
   const { data: healthData, isLoading: isCheckingHealth, error: healthError } = useApiHealth();
 
+  // Debug logging
+  console.log('🔍 Dashboard Layout Debug:', {
+    user: !!user,
+    isLoading,
+    isCheckingHealth,
+    healthData: healthData?.status,
+    healthError: !!healthError,
+    maintenanceNotice: maintenanceNotice.enabled,
+    accounts: !!accounts,
+  });
+
   useEffect(() => {
     // setShowPricingAlert(false)
     setShowMaintenanceAlert(false);
@@ -45,6 +56,7 @@ export default function DashboardLayoutContent({
   // Check authentication status
   useEffect(() => {
     if (!isLoading && !user) {
+      console.log('🔍 Redirecting to auth - no user found');
       router.push('/auth');
     }
   }, [user, isLoading, router]);
@@ -55,6 +67,7 @@ export default function DashboardLayoutContent({
     const endTime = maintenanceNotice.endTime;
 
     if (now > startTime) {
+      console.log('🔍 Showing maintenance notice');
       return (
         <div className="w-screen h-screen flex items-center justify-center">
           <div className="max-w-xl">
@@ -77,6 +90,7 @@ export default function DashboardLayoutContent({
 
   // Show loading state while checking auth or health
   if (isLoading || isCheckingHealth) {
+    console.log('🔍 Showing loading spinner:', { isLoading, isCheckingHealth });
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -86,14 +100,17 @@ export default function DashboardLayoutContent({
 
   // Don't render anything if not authenticated
   if (!user) {
+    console.log('🔍 No user found, not rendering');
     return null;
   }
 
   // Show maintenance page if API is not healthy (but not during initial loading)
   if (!isCheckingHealth && !isApiHealthy) {
+    console.log('🔍 API not healthy, showing maintenance page');
     return <MaintenancePage />;
   }
 
+  console.log('🔍 Rendering dashboard content');
   return (
     <DeleteOperationProvider>
       <SidebarProvider>

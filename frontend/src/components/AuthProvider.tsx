@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const getInitialSession = async () => {
       try {
+        console.log('🔍 AuthProvider: Getting initial session...');
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession();
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error('❌ Error getting initial session:', error);
       } finally {
+        console.log('🔍 AuthProvider: Setting isLoading to false');
         setIsLoading(false);
       }
     };
@@ -58,7 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
-        if (isLoading) setIsLoading(false);
+        if (isLoading) {
+          console.log('🔍 AuthProvider: Setting isLoading to false from auth state change');
+          setIsLoading(false);
+        }
+        
         switch (event) {
           case 'SIGNED_IN':
             if (newSession?.user) {
@@ -103,6 +109,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isLoading,
     signOut,
   };
+
+  console.log('🔍 AuthProvider render state:', { user: !!user, isLoading, session: !!session });
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

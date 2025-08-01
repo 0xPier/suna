@@ -18,7 +18,7 @@ export const maintenanceNoticeFlag = flag({
   async decide() {
     try {
       if (!process.env.EDGE_CONFIG) {
-        console.warn('Edge config is not set');
+        console.log('🔍 Edge config is not set, maintenance notice disabled');
         return { enabled: false } as const;
       }
 
@@ -29,6 +29,7 @@ export const maintenanceNoticeFlag = flag({
       ]);
 
       if (!flags['maintenance-notice_enabled']) {
+        console.log('🔍 Maintenance notice is disabled in edge config');
         return { enabled: false } as const;
       }
 
@@ -36,11 +37,13 @@ export const maintenanceNoticeFlag = flag({
       const endTime = new Date(flags['maintenance-notice_end-time']);
 
       if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+        console.error('🔍 Invalid maintenance notice start or end time');
         throw new Error(
           `Invalid maintenance notice start or end time: ${flags['maintenance-notice_start-time']} or ${flags['maintenance-notice_end-time']}`,
         );
       }
 
+      console.log('🔍 Maintenance notice is enabled:', { startTime, endTime });
       return {
         enabled: true,
         startTime,

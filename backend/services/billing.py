@@ -270,6 +270,19 @@ async def calculate_monthly_usage(client, user_id: str) -> float:
     """Calculate total agent run minutes for the current month for a user."""
     start_time = time.time()
     
+    # In local development mode, return 0 if tables don't exist
+    if config.ENV_MODE == EnvMode.LOCAL:
+        try:
+            # Test if the threads table exists
+            test_result = await client.table('threads').select('thread_id').limit(1).execute()
+        except Exception as e:
+            if "does not exist" in str(e) or "42P01" in str(e):
+                logger.info("Database tables not set up in local development mode, returning 0 usage")
+                return 0.0
+            else:
+                # Re-raise if it's a different error
+                raise
+    
     # Use get_usage_logs to fetch all usage data (it already handles the date filtering and batching)
     total_cost = 0.0
     page = 0
@@ -310,6 +323,19 @@ async def get_usage_logs(client, user_id: str, page: int = 0, items_per_page: in
     cutoff_date = datetime(2025, 6, 30, 9, 0, 0, tzinfo=timezone.utc)
     
     start_of_month = max(start_of_month, cutoff_date)
+    
+    # In local development mode, check if tables exist
+    if config.ENV_MODE == EnvMode.LOCAL:
+        try:
+            # Test if the threads table exists
+            test_result = await client.table('threads').select('thread_id').limit(1).execute()
+        except Exception as e:
+            if "does not exist" in str(e) or "42P01" in str(e):
+                logger.info("Database tables not set up in local development mode, returning empty logs")
+                return {"logs": [], "has_more": False}
+            else:
+                # Re-raise if it's a different error
+                raise
     
     # First get all threads for this user in batches
     batch_size = 1000
@@ -1287,6 +1313,17 @@ async def stripe_webhook(request: Request):
         logger.error(f"Error processing webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Add this function at the top of the file, after the imports
+async def get_current_user_id_conditional():
+    """Get current user ID, but allow None in local development mode."""
+    if config.ENV_MODE == EnvMode.LOCAL:
+        try:
+            return await get_current_user_id_from_jwt()
+        except:
+            return None
+    else:
+        return await get_current_user_id_from_jwt()
+
 @router.get("/available-models")
 async def get_available_models(
     current_user_id: str = Depends(get_current_user_id_from_jwt)
@@ -1301,19 +1338,61 @@ async def get_available_models(
         if config.ENV_MODE == EnvMode.LOCAL:
             logger.info("Running in local development mode - billing checks are disabled")
             
-            # In local mode, return all models from MODEL_NAME_ALIASES
+            # In local mode, return a curated list of models
             model_info = []
-            for short_name, full_name in MODEL_NAME_ALIASES.items():
-                # Skip entries where the key is a full name to avoid duplicates
-                # if short_name == full_name or '/' in short_name:
-                #     continue
+            
+            # Add Ollama models if available
+            try:
+                from services.ollama_service import OllamaService
+                ollama_service = OllamaService()
                 
-                model_info.append({
-                    "id": full_name,
-                    "display_name": short_name,
-                    "short_name": short_name,
-                    "requires_subscription": False  # Always false in local dev mode
-                })
+                # Check if Ollama is accessible
+                if await ollama_service.check_server_status():
+                    ollama_models = await ollama_service.get_available_models()
+                    for model in ollama_models:
+                        model_name = model.get("name", "")
+                        if model_name:
+                            # Format the display name
+                            display_name = model_name.replace(":", " ").replace("-", " ").title()
+                            if ":" in model_name:
+                                # For models with size variants like "llama3.2:7b"
+                                base_name, size = model_name.split(":", 1)
+                                display_name = f"{base_name.title()} {size.upper()}"
+                            
+                            model_info.append({
+                                "id": f"ollama/{model_name}",
+                                "display_name": display_name,
+                                "short_name": f"ollama/{model_name}",
+                                "requires_subscription": False,  # Ollama models are always free
+                                "is_ollama": True,
+                                "model_size": model.get("size", 0),
+                                "parameter_size": model.get("details", {}).get("parameter_size", "")
+                            })
+                    
+                    logger.info(f"Added {len(ollama_models)} Ollama models to available models")
+                else:
+                    logger.info("Ollama server not accessible, skipping Ollama models")
+            except Exception as e:
+                logger.warning(f"Failed to get Ollama models: {str(e)}")
+            
+            # Add a curated list of popular API models (only the most commonly used ones)
+            popular_models = [
+                # OpenAI models
+                {"id": "gpt-4o", "display_name": "GPT-4o", "short_name": "gpt-4o", "requires_subscription": False},
+                {"id": "gpt-4o-mini", "display_name": "GPT-4o Mini", "short_name": "gpt-4o-mini", "requires_subscription": False},
+                {"id": "gpt-3.5-turbo", "display_name": "GPT-3.5 Turbo", "short_name": "gpt-3.5-turbo", "requires_subscription": False},
+                
+                # Anthropic models
+                {"id": "claude-3-5-sonnet-20241022", "display_name": "Claude 3.5 Sonnet", "short_name": "claude-3.5-sonnet", "requires_subscription": False},
+                {"id": "claude-3-5-haiku-20241022", "display_name": "Claude 3.5 Haiku", "short_name": "claude-3.5-haiku", "requires_subscription": False},
+                {"id": "claude-3-opus-20240229", "display_name": "Claude 3 Opus", "short_name": "claude-3-opus", "requires_subscription": False},
+                
+                # Google models
+                {"id": "gemini/gemini-1.5-pro", "display_name": "Gemini 1.5 Pro", "short_name": "gemini-1.5-pro", "requires_subscription": False},
+                {"id": "gemini/gemini-1.5-flash", "display_name": "Gemini 1.5 Flash", "short_name": "gemini-1.5-flash", "requires_subscription": False},
+            ]
+            
+            model_info.extend(popular_models)
             
             return {
                 "models": model_info,
@@ -1342,35 +1421,64 @@ async def get_available_models(
             if tier_info:
                 tier_name = tier_info['name']
         
-        # Get all unique full model names from MODEL_NAME_ALIASES
-        all_models = set()
-        model_aliases = {}
-        
-        for short_name, full_name in MODEL_NAME_ALIASES.items():
-            # Add all unique full model names
-            all_models.add(full_name)
+        # Create a curated list of models based on what's actually available
+        # Focus on the most popular and commonly used models
+        curated_models = [
+            # OpenAI models
+            {"id": "gpt-4o", "display_name": "GPT-4o", "short_name": "gpt-4o"},
+            {"id": "gpt-4o-mini", "display_name": "GPT-4o Mini", "short_name": "gpt-4o-mini"},
+            {"id": "gpt-3.5-turbo", "display_name": "GPT-3.5 Turbo", "short_name": "gpt-3.5-turbo"},
             
-            # Only include short names that don't match their full names for aliases
-            if short_name != full_name and not short_name.startswith("openai/") and not short_name.startswith("anthropic/") and not short_name.startswith("openrouter/") and not short_name.startswith("xai/"):
-                if full_name not in model_aliases:
-                    model_aliases[full_name] = short_name
+            # Anthropic models
+            {"id": "claude-3-5-sonnet-20241022", "display_name": "Claude 3.5 Sonnet", "short_name": "claude-3.5-sonnet"},
+            {"id": "claude-3-5-haiku-20241022", "display_name": "Claude 3.5 Haiku", "short_name": "claude-3.5-haiku"},
+            {"id": "claude-3-opus-20240229", "display_name": "Claude 3 Opus", "short_name": "claude-3-opus"},
+            
+            # Google models
+            {"id": "gemini/gemini-1.5-pro", "display_name": "Gemini 1.5 Pro", "short_name": "gemini-1.5-pro"},
+            {"id": "gemini/gemini-1.5-flash", "display_name": "Gemini 1.5 Flash", "short_name": "gemini-1.5-flash"},
+        ]
         
-        # Create model info with display names for ALL models
+        # Add Ollama models if available
+        try:
+            from services.ollama_service import OllamaService
+            ollama_service = OllamaService()
+            
+            if await ollama_service.check_server_status():
+                ollama_models = await ollama_service.get_available_models()
+                for model in ollama_models:
+                    model_name = model.get("name", "")
+                    if model_name:
+                        display_name = model_name.replace(":", " ").replace("-", " ").title()
+                        if ":" in model_name:
+                            base_name, size = model_name.split(":", 1)
+                            display_name = f"{base_name.title()} {size.upper()}"
+                        
+                        curated_models.append({
+                            "id": f"ollama/{model_name}",
+                            "display_name": display_name,
+                            "short_name": f"ollama/{model_name}",
+                            "is_ollama": True,
+                            "model_size": model.get("size", 0),
+                            "parameter_size": model.get("details", {}).get("parameter_size", "")
+                        })
+        except Exception as e:
+            logger.warning(f"Failed to get Ollama models: {str(e)}")
+        
+        # Process the curated models
         model_info = []
-        for model in all_models:
-            display_name = model_aliases.get(model, model.split('/')[-1] if '/' in model else model)
+        for model in curated_models:
+            model_id = model["id"]
             
             # Check if model requires subscription (not in free tier)
-            requires_sub = model not in free_tier_models
+            requires_sub = model_id not in free_tier_models
             
             # Check if model is available with current subscription
-            is_available = model in allowed_models
+            is_available = model_id in allowed_models
             
-            # Get pricing information - check hardcoded prices first, then litellm
+            # Get pricing information
             pricing_info = {}
-            
-            # Check if we have hardcoded pricing for this model
-            hardcoded_pricing = get_model_pricing(model)
+            hardcoded_pricing = get_model_pricing(model_id)
             if hardcoded_pricing:
                 input_cost_per_million, output_cost_per_million = hardcoded_pricing
                 pricing_info = {
@@ -1379,82 +1487,21 @@ async def get_available_models(
                     "max_tokens": None
                 }
             else:
-                try:
-                    # Try to get pricing using cost_per_token function
-                    models_to_try = []
-                    
-                    # Add the original model name
-                    models_to_try.append(model)
-                    
-                    # Try to resolve the model name using MODEL_NAME_ALIASES
-                    if model in MODEL_NAME_ALIASES:
-                        resolved_model = MODEL_NAME_ALIASES[model]
-                        models_to_try.append(resolved_model)
-                        # Also try without provider prefix if it has one
-                        if '/' in resolved_model:
-                            models_to_try.append(resolved_model.split('/', 1)[1])
-                    
-                    # If model is a value in aliases, try to find a matching key
-                    for alias_key, alias_value in MODEL_NAME_ALIASES.items():
-                        if alias_value == model:
-                            models_to_try.append(alias_key)
-                            break
-                    
-                    # Also try without provider prefix for the original model
-                    if '/' in model:
-                        models_to_try.append(model.split('/', 1)[1])
-                    
-                    # Special handling for Google models accessed via Google API
-                    if model.startswith('gemini/'):
-                        google_model_name = model.replace('gemini/', '')
-                        models_to_try.append(google_model_name)
-                    
-                    # Special handling for Google models accessed via Google API
-                    if model.startswith('gemini/'):
-                        google_model_name = model.replace('gemini/', '')
-                        models_to_try.append(google_model_name)
-                    
-                    # Try each model name variation until we find one that works
-                    input_cost_per_token = None
-                    output_cost_per_token = None
-                    
-                    for model_name in models_to_try:
-                        try:
-                            # Use cost_per_token with sample token counts to get the per-token costs
-                            input_cost, output_cost = cost_per_token(model_name, 1000000, 1000000)
-                            if input_cost is not None and output_cost is not None:
-                                input_cost_per_token = input_cost
-                                output_cost_per_token = output_cost
-                                break
-                        except Exception:
-                            continue
-                    
-                    if input_cost_per_token is not None and output_cost_per_token is not None:
-                        pricing_info = {
-                            "input_cost_per_million_tokens": input_cost_per_token * TOKEN_PRICE_MULTIPLIER,
-                            "output_cost_per_million_tokens": output_cost_per_million * TOKEN_PRICE_MULTIPLIER,
-                            "max_tokens": None  # cost_per_token doesn't provide max_tokens info
-                        }
-                    else:
-                        pricing_info = {
-                            "input_cost_per_million_tokens": None,
-                            "output_cost_per_million_tokens": None,
-                            "max_tokens": None
-                        }
-                except Exception as e:
-                    logger.warning(f"Could not get pricing for model {model}: {str(e)}")
-                    pricing_info = {
-                        "input_cost_per_million_tokens": None,
-                        "output_cost_per_million_tokens": None,
-                        "max_tokens": None
-                    }
+                pricing_info = {
+                    "input_cost_per_million_tokens": None,
+                    "output_cost_per_million_tokens": None,
+                    "max_tokens": None
+                }
 
             model_info.append({
-                "id": model,
-                "display_name": display_name,
-                "short_name": model_aliases.get(model),
+                "id": model_id,
+                "display_name": model["display_name"],
+                "short_name": model.get("short_name"),
                 "requires_subscription": requires_sub,
                 "is_available": is_available,
+                "is_ollama": model.get("is_ollama", False),
+                "model_size": model.get("model_size"),
+                "parameter_size": model.get("parameter_size"),
                 **pricing_info
             })
         
@@ -1467,7 +1514,6 @@ async def get_available_models(
     except Exception as e:
         logger.error(f"Error getting available models: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting available models: {str(e)}")
-
 
 @router.get("/usage-logs")
 async def get_usage_logs_endpoint(
@@ -1744,3 +1790,8 @@ async def reactivate_subscription(
     except Exception as e:
         logger.error(f"Error reactivating subscription: {str(e)}")
         raise HTTPException(status_code=500, detail="Error processing reactivation request")
+
+@router.get("/test-connection")
+async def test_connection():
+    """Simple test endpoint to verify frontend-backend connectivity."""
+    return {"status": "connected", "message": "Backend is accessible", "timestamp": datetime.now(timezone.utc).isoformat()}

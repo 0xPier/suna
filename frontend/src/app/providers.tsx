@@ -37,7 +37,7 @@ export const ToolCallsContext = createContext<{
 export function Providers({ children }: { children: React.ReactNode }) {
   // Shared state for tool calls across the app
   const [toolCalls, setToolCalls] = useState<ParsedTag[]>([]);
-  const queryClient = new QueryClient();
+  const [queryClient] = useState(() => new QueryClient());
   const dehydratedState = dehydrate(queryClient);
 
   return (
